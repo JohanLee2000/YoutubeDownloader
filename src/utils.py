@@ -4,11 +4,20 @@ import logging
 from tqdm import tqdm
 import threading
 import time
+from urllib.parse import urlparse, parse_qs
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def download_video_as_mp3(video_url, output_directory, max_retries=3, retry_delay=5):
+def extract_playlist_id(url):
+    """
+    Extracts the playlist ID from a URL if present.
+    """
+    parsed_url = urlparse(url)
+    query_params = parse_qs(parsed_url.query)
+    return query_params.get('list', [None])[0]
+
+def download_video_as_mp3(video_url, output_directory, max_retries=2, retry_delay=5):
     """
     Downloads a YouTube video as an MP3 file using yt-dlp.
     """
@@ -23,6 +32,7 @@ def download_video_as_mp3(video_url, output_directory, max_retries=3, retry_dela
                     'preferredcodec': 'mp3',
                     'preferredquality': '192',
                 }],
+                # 'ffmpeg_location': '/path/to/ffmpeg',  # Specify path if not in PATH
                 'progress_hooks': [progress_hook],  # Add progress hook
             }
 
@@ -39,7 +49,6 @@ def download_video_as_mp3(video_url, output_directory, max_retries=3, retry_dela
         time.sleep(retry_delay)
 
     logging.error(f"Failed to download video after {max_retries} attempts.")
-
 
 def download_playlist_as_mp3_concurrently(playlist_url, output_directory, max_retries=3, retry_delay=5):
     """
@@ -69,6 +78,18 @@ def download_playlist_as_mp3_concurrently(playlist_url, output_directory, max_re
     except Exception as e:
         logging.error(f"An error occurred while downloading playlist: {e}")
 
+def download_video_or_playlist(url, output_directory):
+    """
+    Determines whether the URL is a single video or a playlist and starts the download.
+    """
+    playlist_id = extract_playlist_id(url)
+    
+    if playlist_id:
+        logging.info(f"Detected playlist ID: {playlist_id}")
+        playlist_url = f"https://www.youtube.com/playlist?list={playlist_id}"
+        download_playlist_as_mp3_concurrently(playlist_url, output_directory)
+    else:
+        download_video_as_mp3(url, output_directory)
 
 def progress_hook(d):
     """
