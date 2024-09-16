@@ -1,7 +1,5 @@
 import yt_dlp
-import os
 import logging
-from tqdm import tqdm
 import threading
 import time
 from urllib.parse import urlparse, parse_qs
@@ -17,7 +15,7 @@ def extract_playlist_id(url):
     query_params = parse_qs(parsed_url.query)
     return query_params.get('list', [None])[0]
 
-def download_video_as_mp3(video_url, output_directory, max_retries=2, retry_delay=5):
+def download_video_as_mp3(video_url, output_directory, progress_callback=None, max_retries=2, retry_delay=5):
     """
     Downloads a YouTube video as an MP3 file using yt-dlp.
     """
@@ -33,7 +31,7 @@ def download_video_as_mp3(video_url, output_directory, max_retries=2, retry_dela
                     'preferredquality': '192',
                 }],
                 # 'ffmpeg_location': '/path/to/ffmpeg',  # Specify path if not in PATH
-                'progress_hooks': [progress_hook],  # Add progress hook
+                'progress_hooks': [lambda d: progress_hook(d, progress_callback)],
             }
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -50,7 +48,7 @@ def download_video_as_mp3(video_url, output_directory, max_retries=2, retry_dela
 
     logging.error(f"Failed to download video after {max_retries} attempts.")
 
-def download_playlist_as_mp3_concurrently(playlist_url, output_directory, max_retries=3, retry_delay=5):
+def download_playlist_as_mp3_concurrently(playlist_url, output_directory, progress_callback=None, max_retries=3, retry_delay=5):
     """
     Downloads all videos in a YouTube playlist as MP3 files concurrently using yt-dlp.
     """
@@ -78,7 +76,7 @@ def download_playlist_as_mp3_concurrently(playlist_url, output_directory, max_re
     except Exception as e:
         logging.error(f"An error occurred while downloading playlist: {e}")
 
-def download_video_or_playlist(url, output_directory):
+def download_video_or_playlist(url, output_directory, progress_callback=None):
     """
     Determines whether the URL is a single video or a playlist and starts the download.
     """
@@ -91,16 +89,18 @@ def download_video_or_playlist(url, output_directory):
     else:
         download_video_as_mp3(url, output_directory)
 
-def progress_hook(d):
+def progress_hook(d, progress_callback):
     """
-    Hook to display download progress in the console using tqdm.
+    Hook to update the progress callback.
     """
     if d['status'] == 'downloading':
-        # Update the progress bar with the downloaded bytes and total file size
         total_size = d.get('total_bytes', 0)
         downloaded = d.get('downloaded_bytes', 0)
         if total_size > 0:
             progress = (downloaded / total_size) * 100
-            print(f"Progress: {progress:.2f}%")
+            if progress_callback:
+                progress_callback(progress)
     elif d['status'] == 'finished':
-        print("Download finished, now converting...")
+        if progress_callback:
+            progress_callback(100)
+        logging.info("Download finished, now converting...")

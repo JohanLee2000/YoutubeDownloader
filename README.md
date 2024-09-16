@@ -9,7 +9,7 @@ A Python tool that downloads YouTube videos and playlists as `.mp3` files.
 ## Requirements
 - Python 3.x
 - `yt-dlp` and `moviepy` libraries
-- ffmpeg installed and in PATH environment variable
+- ffmpeg installed and in PATH environment variable (or specify path in download_video_as_mp3: 'ffmpeg_location')
 
 ## Setup
 1. Clone the repo:
