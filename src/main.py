@@ -14,14 +14,19 @@ class DownloadThread(QThread):
         self.output_directory = output_directory
 
     def run(self):
-        def progress_callback(progress):
+        def progress_callback(progress, video_title=None):
             self.progress_signal.emit(progress)
-        
+            if video_title:
+                self.finished_signal.emit(video_title)  # Emit video title for playlists
+            else:
+                self.finished_signal.emit(f"Downloading video... {int(progress)}%")
+
         try:
             download_video_or_playlist(self.url, self.output_directory, progress_callback)
-            self.finished_signal.emit("Download complete!")
+            self.finished_signal.emit("All videos downloaded successfully!")
         except Exception as e:
             self.finished_signal.emit(f"Error: {e}")
+
 
 class DownloadApp(QMainWindow):
     def __init__(self):
@@ -45,8 +50,10 @@ class DownloadApp(QMainWindow):
         self.start_button = QPushButton("Start Download", self)
         self.start_button.clicked.connect(self.start_download)
 
+        # Progress bar
         self.progress_bar = QProgressBar(self)
-        self.progress_bar.setMaximum(100)
+        self.progress_bar.setValue(0)
+        self.progress_bar.setAlignment(Qt.AlignCenter)
 
         self.status_label = QLabel("", self)
 
@@ -84,10 +91,16 @@ class DownloadApp(QMainWindow):
         self.thread.start()
 
     def update_progress(self, progress):
-        self.progress_bar.setValue(progress)
+        self.progress_bar.setValue(int(progress))
+
+        if int(progress) == 100:
+            self.progress_bar.setStyleSheet("QProgressBar::chunk { background-color: green; }")
+        else:
+            self.progress_bar.setStyleSheet("")  # Reset to default style
 
     def show_message(self, message):
         self.status_label.setText(message)
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

@@ -31,7 +31,7 @@ def download_video_as_mp3(video_url, output_directory, progress_callback=None, m
                     'preferredquality': '192',
                 }],
                 # 'ffmpeg_location': '/path/to/ffmpeg',  # Specify path if not in PATH
-                'progress_hooks': [lambda d: progress_hook(d, progress_callback)],
+                'progress_hooks': [lambda d: progress_hook(d, progress_callback)],  # Pass the progress callback
             }
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -59,22 +59,25 @@ def download_playlist_as_mp3_concurrently(playlist_url, output_directory, progre
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             playlist_info = ydl.extract_info(playlist_url, download=False)
-            video_urls = [entry['url'] for entry in playlist_info['entries']]
-
-        # Multithreading for concurrent downloads
-        threads = []
-        for video_url in video_urls:
-            thread = threading.Thread(target=download_video_as_mp3, args=(video_url, output_directory, max_retries, retry_delay))
-            threads.append(thread)
-            thread.start()
-
-        for thread in threads:
-            thread.join()  # Wait for all threads to finish
+            video_entries = playlist_info['entries']
+            video_urls = [entry['url'] for entry in video_entries]
         
-        logging.info("All videos in playlist downloaded successfully!")
+        # Track progress and video titles
+        for idx, video_entry in enumerate(video_entries):
+            video_url = video_entry['url']
+            video_title = video_entry['title']
+            # Start downloading and pass the video title to the progress callback
+            if callable(progress_callback):
+                progress_callback(0, f"Downloading video {idx + 1}/{len(video_entries)}: {video_title}")
+            
+            download_video_as_mp3(video_url, output_directory, lambda progress: progress_callback(progress, video_title))
+        
+        if callable(progress_callback):
+            progress_callback(100, "All videos downloaded successfully!")
 
     except Exception as e:
         logging.error(f"An error occurred while downloading playlist: {e}")
+
 
 def download_video_or_playlist(url, output_directory, progress_callback=None):
     """
@@ -85,22 +88,24 @@ def download_video_or_playlist(url, output_directory, progress_callback=None):
     if playlist_id:
         logging.info(f"Detected playlist ID: {playlist_id}")
         playlist_url = f"https://www.youtube.com/playlist?list={playlist_id}"
-        download_playlist_as_mp3_concurrently(playlist_url, output_directory)
+        download_playlist_as_mp3_concurrently(playlist_url, output_directory, progress_callback)
     else:
-        download_video_as_mp3(url, output_directory)
+        download_video_as_mp3(url, output_directory, progress_callback)
 
-def progress_hook(d, progress_callback):
+def progress_hook(d, progress_callback=None):
     """
-    Hook to update the progress callback.
+    Hook to display download progress and update UI if progress_callback is provided.
     """
     if d['status'] == 'downloading':
         total_size = d.get('total_bytes', 0)
         downloaded = d.get('downloaded_bytes', 0)
         if total_size > 0:
             progress = (downloaded / total_size) * 100
-            if progress_callback:
+            print(f"Progress: {progress:.2f}%")
+            if callable(progress_callback):
                 progress_callback(progress)
     elif d['status'] == 'finished':
-        if progress_callback:
+        # Set progress to 100 when done
+        if callable(progress_callback):
             progress_callback(100)
-        logging.info("Download finished, now converting...")
+        print("Download finished, now converting...")
