@@ -28,7 +28,7 @@ A Python tool that downloads YouTube videos and playlists as `.mp3` files.
     python src/main.py
     ```
 
-4. Enter the YouTube URL:
+4. Enter the YouTube URL(Video or playlist):
     ```bash
     {URL}
     ```
@@ -38,7 +38,7 @@ A Python tool that downloads YouTube videos and playlists as `.mp3` files.
     ```bash
     {Path}
     ```
-    example: Music
+    example: 'Music' or Browse Directory
 
     It will then put the file inside the existing directory or create one if not.
 
