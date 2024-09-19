@@ -1,9 +1,23 @@
 import sys
-import os
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QLineEdit, QVBoxLayout, QWidget, QLabel, QFileDialog,QHBoxLayout, QProgressBar, QFormLayout
+import logging
+from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QLineEdit, QVBoxLayout, QWidget, QLabel, QFileDialog,QHBoxLayout, QProgressBar, QFormLayout, QTextEdit
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
+
 from utils import download_video_or_playlist
 
+# Custom logging handler to emit logs to QTextEdit in the GUI
+class QTextEditLogger(logging.Handler):
+    def __init__(self, text_edit):
+        super().__init__()
+        self.text_edit = text_edit
+
+    def emit(self, record):
+        msg = self.format(record)
+        self.text_edit.append(msg)
+        QApplication.processEvents()  # Ensure logs update in real-time
+
+
+# Download threads for processing videos
 class DownloadThread(QThread):
     progress_signal = pyqtSignal(float)
     finished_signal = pyqtSignal(str)
@@ -23,7 +37,7 @@ class DownloadThread(QThread):
 
         try:
             download_video_or_playlist(self.url, self.output_directory, progress_callback)
-            self.finished_signal.emit("All videos downloaded successfully!")
+            self.finished_signal.emit("Download success!")
         except Exception as e:
             self.finished_signal.emit(f"Error: {e}")
 
@@ -36,6 +50,8 @@ class DownloadApp(QMainWindow):
         self.setGeometry(1000, 500, 900, 600)
 
         self.initUI()
+        self.setup_logging()
+
 
     def initUI(self):
          # Set dark theme
@@ -47,11 +63,13 @@ class DownloadApp(QMainWindow):
             QPushButton {
                 background-color: #4A4A4A;
                 color: #F0F0F0;
-                padding: 5px;
-                border-radius: 10px;
             }
             QPushButton:hover {
                 background-color: #555555;
+            }
+            QPushButton#BrowseButton {
+                padding: 5px;
+                border-radius: 10px;
             }
             QLabel {
                 color: #F0F0F0;
@@ -84,16 +102,23 @@ class DownloadApp(QMainWindow):
         self.browse_button.setFixedWidth(80)
         self.browse_button.clicked.connect(self.browse_directory)
 
+        self.browse_button.setObjectName("BrowseButton") #For CSS styling
+
         # Start download button
         self.start_button = QPushButton("Start Download", self)
         self.start_button.clicked.connect(self.start_download)
+
+        self.start_button.setObjectName("DownloadButton") #For CSS styling
 
         # Progress bar
         self.progress_bar = QProgressBar(self)
         self.progress_bar.setValue(0)
         self.progress_bar.setAlignment(Qt.AlignCenter)
-
         self.status_label = QLabel("", self)
+
+        # Text area for logging
+        self.log_text = QTextEdit(self)
+        self.log_text.setReadOnly(True)
 
         # Horizontal layout for output directory and Browse button
         output_layout = QHBoxLayout()
@@ -113,10 +138,20 @@ class DownloadApp(QMainWindow):
         layout.addWidget(self.start_button)
         layout.addWidget(self.progress_bar)
         layout.addWidget(self.status_label)
+        layout.addWidget(self.log_text)  # Add log text area to layout
 
         container = QWidget()
         container.setLayout(layout)
         self.setCentralWidget(container)
+
+    def setup_logging(self):
+        """
+        Set up logging to redirect to the QTextEdit in the GUI.
+        """
+        log_handler = QTextEditLogger(self.log_text)
+        log_handler.setFormatter(logging.Formatter('%(message)s'))
+        logging.getLogger().addHandler(log_handler)
+        logging.getLogger().setLevel(logging.INFO)
 
     def browse_directory(self):
         directory = QFileDialog.getExistingDirectory(self, "Select Directory")
@@ -130,7 +165,7 @@ class DownloadApp(QMainWindow):
         if not url or not output_directory:
             self.status_label.setText("Please enter both URL and output directory.")
             return
-
+        self.status_label.setText("Extracting info...")
         self.thread = DownloadThread(url, output_directory)
         self.thread.progress_signal.connect(self.update_progress)
         self.thread.finished_signal.connect(self.show_message)

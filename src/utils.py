@@ -1,11 +1,10 @@
 import yt_dlp
 import logging
-import threading
 import time
 from urllib.parse import urlparse, parse_qs
 
 # Setup logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
 def extract_playlist_id(url):
     """
@@ -35,9 +34,13 @@ def download_video_as_mp3(video_url, output_directory, progress_callback=None, m
             }
 
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                # Extract video information to get the title before downloading
+                video_info = ydl.extract_info(video_url, download=False)
+                video_title = video_info['title']
+
                 ydl.download([video_url])
             
-            logging.info("Download complete!")
+            logging.info(f"{video_title} - Download complete!")
             return
 
         except yt_dlp.DownloadError as e:
@@ -101,11 +104,11 @@ def progress_hook(d, progress_callback=None):
         downloaded = d.get('downloaded_bytes', 0)
         if total_size > 0:
             progress = (downloaded / total_size) * 100
-            print(f"Progress: {progress:.2f}%")
+            logging.info(f"Downloading... {progress:.2f}%")
             if callable(progress_callback):
                 progress_callback(progress)
     elif d['status'] == 'finished':
+        logging.info("Download finished, now converting...")
         # Set progress to 100 when done
         if callable(progress_callback):
             progress_callback(100)
-        print("Download finished, now converting...")
