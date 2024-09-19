@@ -1,7 +1,9 @@
 import sys
 import logging
+import ctypes
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QLineEdit, QVBoxLayout, QWidget, QLabel, QFileDialog,QHBoxLayout, QProgressBar, QFormLayout, QTextEdit
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
+from PyQt5.QtGui import QIcon
 
 from utils import download_video_or_playlist
 
@@ -48,6 +50,8 @@ class DownloadApp(QMainWindow):
 
         self.setWindowTitle("YouTube Downloader")
         self.setGeometry(1000, 500, 900, 600)
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("mycompany.myproduct.subproduct.version")
+        self.setWindowIcon(QIcon("icon.png"))
 
         self.initUI()
         self.setup_logging()
