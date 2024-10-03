@@ -4,3 +4,7 @@ __pycache__/
 *.log
 
 Music/
+
+ffmpeg.exe
+
+dist

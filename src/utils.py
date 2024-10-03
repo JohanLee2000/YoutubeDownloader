@@ -1,6 +1,8 @@
 import yt_dlp
 import logging
 import time
+import os
+import sys
 from urllib.parse import urlparse, parse_qs
 
 # Setup logging
@@ -21,6 +23,10 @@ def download_video_as_mp3(video_url, output_directory, progress_callback=None, m
     attempt = 0
     while attempt < max_retries:
         try:
+            if hasattr(sys, '_MEIPASS'):
+                ffmpeg_location = os.path.join(sys._MEIPASS, 'ffmpeg.exe')  # Path to bundled ffmpeg
+            else:
+                ffmpeg_location = 'ffmpeg.exe'  # Fallback for when not bundled
             ydl_opts = {
                 'format': 'bestaudio/best',
                 'outtmpl': f'{output_directory}/%(title)s.%(ext)s',
@@ -29,7 +35,7 @@ def download_video_as_mp3(video_url, output_directory, progress_callback=None, m
                     'preferredcodec': 'mp3',
                     'preferredquality': '192',
                 }],
-                # 'ffmpeg_location': '/path/to/ffmpeg',  # Specify path if not in PATH
+                'ffmpeg_location': ffmpeg_location,  # Specify path if not in PATH
                 'progress_hooks': [lambda d: progress_hook(d, progress_callback)],  # Pass the progress callback
             }
 
@@ -63,7 +69,6 @@ def download_playlist_as_mp3_concurrently(playlist_url, output_directory, progre
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             playlist_info = ydl.extract_info(playlist_url, download=False)
             video_entries = playlist_info['entries']
-            video_urls = [entry['url'] for entry in video_entries]
         
         # Track progress and video titles
         for idx, video_entry in enumerate(video_entries):
@@ -72,6 +77,7 @@ def download_playlist_as_mp3_concurrently(playlist_url, output_directory, progre
             # Start downloading and pass the video title to the progress callback
             if callable(progress_callback):
                 progress_callback(0, f"Downloading video {idx + 1}/{len(video_entries)}: {video_title}")
+            logging.info(f"Downloading video {idx + 1}/{len(video_entries)}: {video_title}")
             
             download_video_as_mp3(video_url, output_directory, lambda progress: progress_callback(progress, video_title))
         
@@ -104,11 +110,10 @@ def progress_hook(d, progress_callback=None):
         downloaded = d.get('downloaded_bytes', 0)
         if total_size > 0:
             progress = (downloaded / total_size) * 100
-            logging.info(f"Downloading... {progress:.2f}%")
             if callable(progress_callback):
                 progress_callback(progress)
     elif d['status'] == 'finished':
-        logging.info("Download finished, now converting...")
+        logging.info("Converting file to mp3...")
         # Set progress to 100 when done
         if callable(progress_callback):
             progress_callback(100)

@@ -56,5 +56,13 @@ A Python tool that downloads YouTube videos and playlists as `.mp3` files.
 
     It will then put the file inside the existing directory or create one if not.
 
+## Disclaimer
+This app is intended for personal use only. It is not intended for commercial purposes, distributing or sharing copyrighted material without proper authorization from the content owners or in violation of Youtube's terms of service.
+
+By using this application you agree to use the downloaded content according to the copyright laws and regulations and accept full
+responsibility for any misuse or violations.
+
+The developers of this application shall not be held liable for any unauthorized or improper use of the downloaded content. Users are solely responsible for their actions and are encouraged to use this application responsibly and ethically.
+
 ## License
 MIT License

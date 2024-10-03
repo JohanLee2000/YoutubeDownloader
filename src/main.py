@@ -3,7 +3,7 @@ import logging
 import ctypes
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QLineEdit, QVBoxLayout, QWidget, QLabel, QFileDialog,QHBoxLayout, QProgressBar, QFormLayout, QTextEdit
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QFont
 
 from utils import download_video_or_playlist
 
@@ -16,6 +16,7 @@ class QTextEditLogger(logging.Handler):
     def emit(self, record):
         msg = self.format(record)
         self.text_edit.append(msg)
+        self.text_edit.verticalScrollBar().setValue(self.text_edit.verticalScrollBar().maximum())  # Scroll to bottom
         QApplication.processEvents()  # Ensure logs update in real-time
 
 
@@ -51,7 +52,6 @@ class DownloadApp(QMainWindow):
         self.setWindowTitle("YouTube Downloader")
         self.setGeometry(1000, 500, 900, 600)
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("mycompany.myproduct.subproduct.version")
-        self.setWindowIcon(QIcon("icon.png"))
 
         self.initUI()
         self.setup_logging()
@@ -124,6 +124,7 @@ class DownloadApp(QMainWindow):
         self.log_text = QTextEdit(self)
         self.log_text.setReadOnly(True)
 
+
         # Horizontal layout for output directory and Browse button
         output_layout = QHBoxLayout()
         output_layout.addWidget(self.output_label)
@@ -156,6 +157,8 @@ class DownloadApp(QMainWindow):
         log_handler.setFormatter(logging.Formatter('%(message)s'))
         logging.getLogger().addHandler(log_handler)
         logging.getLogger().setLevel(logging.INFO)
+        
+        self.log_text.setFont(QFont('Helvetica', 9))  # Change font to Arial for testing
 
     def browse_directory(self):
         directory = QFileDialog.getExistingDirectory(self, "Select Directory")
@@ -189,6 +192,7 @@ class DownloadApp(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    app.setWindowIcon(QIcon("icon.ico"))  # Set the taskbar icon here
     window = DownloadApp()
     window.show()
     sys.exit(app.exec_())
