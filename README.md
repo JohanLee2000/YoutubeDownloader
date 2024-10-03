@@ -1,4 +1,4 @@
-# YoutubeDownloader# YouTube Video to MP3 Downloader
+# YoutubeDownloader YouTube Video to MP3 Downloader
 
 A Python tool that downloads YouTube videos and playlists as `.mp3` files.
 
@@ -8,10 +8,12 @@ A Python tool that downloads YouTube videos and playlists as `.mp3` files.
 - Download YouTube videos and playlists
 - Convert downloaded videos to MP3 format
 
-## Requirements
+## Releases
 Download from the Releases page for the executable file! No other step is necessary. 
 
-Otherwise if you want to get the source code and run on your local machine:
+**Otherwise if you want to get the source code and run on your local machine, continue to follow the steps below:**
+
+## Requirements
 - Python 3.x
 - ffmpeg installed and in PATH environment variable (or specify path in download_video_as_mp3: 'ffmpeg_location')
 
