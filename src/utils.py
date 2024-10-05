@@ -8,13 +8,26 @@ from urllib.parse import urlparse, parse_qs
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
+def is_youtube_mix(playlist_id):
+    """
+    Checks if the playlist is a YouTube Mix based on the playlist ID.
+    """
+    return playlist_id.startswith('RD')  # YouTube Mixes usually have IDs starting with 'RD'
+
 def extract_playlist_id(url):
     """
-    Extracts the playlist ID from a URL if present.
+    Extracts the playlist ID from a URL if present and checks if it is a YouTube Mix.
     """
     parsed_url = urlparse(url)
     query_params = parse_qs(parsed_url.query)
-    return query_params.get('list', [None])[0]
+    playlist_id = query_params.get('list', [None])[0]
+
+    if playlist_id and is_youtube_mix(playlist_id):
+        logging.info(f"Detected YouTube Mix: {playlist_id}")
+    else:
+        logging.info(f"Detected regular playlist: {playlist_id}")
+    
+    return playlist_id
 
 def download_video_as_mp3(video_url, output_directory, progress_callback=None, max_retries=2, retry_delay=5):
     """
@@ -95,11 +108,57 @@ def download_video_or_playlist(url, output_directory, progress_callback=None):
     playlist_id = extract_playlist_id(url)
     
     if playlist_id:
-        logging.info(f"Detected playlist ID: {playlist_id}")
-        playlist_url = f"https://www.youtube.com/playlist?list={playlist_id}"
-        download_playlist_as_mp3_concurrently(playlist_url, output_directory, progress_callback)
+        if is_youtube_mix(playlist_id):
+            logging.info("This is a YouTube Mix. Fetching videos...")
+            # Handle mix-specific logic (such as using the JS console method you mentioned)
+            download_youtube_mix_as_mp3(url, output_directory, progress_callback)
+        else:
+            logging.info("Fetching videos...")
+            playlist_url = f"https://www.youtube.com/playlist?list={playlist_id}"
+            download_playlist_as_mp3_concurrently(playlist_url, output_directory, progress_callback)
     else:
         download_video_as_mp3(url, output_directory, progress_callback)
+
+
+def extract_video_urls_from_mix(mix_url):
+    """
+    Extracts video URLs from a YouTube Mix.
+    """
+    ydl_opts = {
+        'extract_flat': True,  # Don't download the videos, just extract links
+        'playlist_items': '1-25',  # To extract all items in the playlist
+    }
+
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            playlist_info = ydl.extract_info(mix_url, download=False)
+            video_entries = playlist_info['entries']
+            video_urls = [entry['url'] for entry in video_entries if entry.get('url')]
+            print(video_entries)
+            return video_urls
+
+    except Exception as e:
+        logging.error(f"An error occurred while extracting video URLs from the mix: {e}")
+        return []
+
+def download_youtube_mix_as_mp3(mix_url, output_directory, progress_callback=None):
+    """
+    Downloads all videos in a YouTube mix as MP3 files.
+    """
+    video_urls = extract_video_urls_from_mix(mix_url)
+    if not video_urls:
+        logging.error("No video URLs found.")
+        return
+
+    for idx, video_url in enumerate(video_urls):
+        video_title = f"Video {idx + 1}"
+        if callable(progress_callback):
+            progress_callback(0, f"Downloading video {idx + 1}/{len(video_urls)}: {video_title}")
+
+        download_video_as_mp3(video_url, output_directory, lambda progress: progress_callback(progress, video_title))
+
+    if callable(progress_callback):
+        progress_callback(100, "All videos downloaded successfully!")
 
 def progress_hook(d, progress_callback=None):
     """
