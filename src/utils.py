@@ -133,9 +133,10 @@ def extract_video_urls_from_mix(mix_url):
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             playlist_info = ydl.extract_info(mix_url, download=False)
             video_entries = playlist_info['entries']
-            video_urls = [entry['url'] for entry in video_entries if entry.get('url')]
-            print(video_entries)
-            return video_urls
+            # video_urls = [entry['url'] for entry in video_entries if entry.get('url')]
+            # print(video_entries)
+            # return video_urls
+            return video_entries
 
     except Exception as e:
         logging.error(f"An error occurred while extracting video URLs from the mix: {e}")
@@ -145,15 +146,16 @@ def download_youtube_mix_as_mp3(mix_url, output_directory, progress_callback=Non
     """
     Downloads all videos in a YouTube mix as MP3 files.
     """
-    video_urls = extract_video_urls_from_mix(mix_url)
-    if not video_urls:
-        logging.error("No video URLs found.")
+    video_entries = extract_video_urls_from_mix(mix_url)
+    if not video_entries:
+        logging.error("No video entries found.")
         return
 
-    for idx, video_url in enumerate(video_urls):
-        video_title = f"Video {idx + 1}"
+    for idx, video_entry in enumerate(video_entries):
+        video_url = video_entry['url']
+        video_title = video_entry['title']
         if callable(progress_callback):
-            progress_callback(0, f"Downloading video {idx + 1}/{len(video_urls)}: {video_title}")
+            progress_callback(0, f"Downloading video {idx + 1}/{len(video_entries)}: {video_title}")
 
         download_video_as_mp3(video_url, output_directory, lambda progress: progress_callback(progress, video_title))
 
