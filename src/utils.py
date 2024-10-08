@@ -14,6 +14,13 @@ def is_youtube_mix(playlist_id):
     """
     return playlist_id.startswith('RD')  # YouTube Mixes usually have IDs starting with 'RD'
 
+def is_valid_youtube_url(url):
+    """
+    Checks if a URL is a valid YouTube URL.
+    """
+    parsed_url = urlparse(url)
+    return parsed_url.netloc in ['www.youtube.com', 'youtube.com', 'm.youtube.com', 'youtu.be']
+
 def extract_playlist_id(url):
     """
     Extracts the playlist ID from a URL if present and checks if it is a YouTube Mix.
@@ -24,7 +31,7 @@ def extract_playlist_id(url):
 
     if playlist_id and is_youtube_mix(playlist_id):
         logging.info(f"Detected YouTube Mix: {playlist_id}")
-    else:
+    elif playlist_id:
         logging.info(f"Detected regular playlist: {playlist_id}")
     
     return playlist_id
@@ -63,14 +70,21 @@ def download_video_as_mp3(video_url, output_directory, progress_callback=None, m
             return
 
         except yt_dlp.DownloadError as e:
-            logging.error(f"Error downloading video: {e}. Retrying in {retry_delay} seconds...")
+            logging.error(f"Error downloading video: {e}")
+            if 'URL' in str(e):
+                logging.error(f"Invalid URL: {video_url}")
+                if callable(progress_callback):
+                    progress_callback(0, f"Error: Invalid URL - {video_url}")
+                return  # Stop retrying if it's an invalid URL error
+            else:
+                logging.error(f"Retrying in {retry_delay} seconds...")
         
         attempt += 1
         time.sleep(retry_delay)
 
     logging.error(f"Failed to download video after {max_retries} attempts.")
 
-def download_playlist_as_mp3_concurrently(playlist_url, output_directory, progress_callback=None, max_retries=3, retry_delay=5):
+def download_playlist_as_mp3_concurrently(playlist_url, output_directory, progress_callback=None, max_retries=2, retry_delay=5):
     """
     Downloads all videos in a YouTube playlist as MP3 files concurrently using yt-dlp.
     """
@@ -105,6 +119,12 @@ def download_video_or_playlist(url, output_directory, progress_callback=None):
     """
     Determines whether the URL is a single video or a playlist and starts the download.
     """
+    if not is_valid_youtube_url(url):
+        logging.error(f"Invalid YouTube URL: {url}")
+        if callable(progress_callback):
+            progress_callback(0, f"Error: Invalid YouTube URL - {url}")
+        return
+    
     playlist_id = extract_playlist_id(url)
     
     if playlist_id:

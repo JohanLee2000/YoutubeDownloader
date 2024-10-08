@@ -5,7 +5,7 @@ A Python tool that downloads YouTube videos and playlists as `.mp3` files.
 <img src="screenshots/youtubeDownloader.png" alt="App Screenshot" width="500"/>
 
 ## Features
-- Download YouTube videos and playlists
+- Download YouTube Videos, Playlists and Mixes
 - Convert downloaded videos to MP3 format
 
 ## Releases

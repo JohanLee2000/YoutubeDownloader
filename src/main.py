@@ -40,9 +40,8 @@ class DownloadThread(QThread):
 
         try:
             download_video_or_playlist(self.url, self.output_directory, progress_callback)
-            self.finished_signal.emit("Download success!")
         except Exception as e:
-            self.finished_signal.emit(f"Error: {e}")
+            self.finished_signal.emit(f"Error: {e}") #Duplicate
 
 
 class DownloadApp(QMainWindow):
